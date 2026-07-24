@@ -1,9 +1,11 @@
-const CACHE_NAME = 'seguimiento-cannabis-pacientes-reportes-v3';
+const CACHE_NAME = 'seguimiento-cannabis-pacientes-reportes-v5';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
+  './styles.css?v=5',
   './app.js',
+  './app.js?v=5',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

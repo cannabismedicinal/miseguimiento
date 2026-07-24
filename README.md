@@ -89,3 +89,10 @@ La app usa rutas relativas, por eso puede funcionar dentro de una subcarpeta tip
 - Exportación/importación JSON local.
 - Configuración con datos de ejemplo y borrado de datos.
 - PWA instalable con manifest, service worker e íconos.
+
+
+## Cambios v5
+
+- Reporte médico ajustado para evitar superposición de textos en celular.
+- Logo integrado en el encabezado de la app y actualizado en los íconos PWA.
+- Service worker actualizado para forzar recarga de la nueva versión.
