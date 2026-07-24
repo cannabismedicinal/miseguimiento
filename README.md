@@ -1,6 +1,18 @@
-# Mi Seguimiento Cannábico — Versión pacientes / piloto
+# Mi Seguimiento Cannábico — Versión pacientes / reportes médicos
 
-Aplicación web mobile-first para que una persona adulta que utiliza cannabis medicinal pueda registrar síntomas, sueño, bienestar, uso u omisión del tratamiento, tomas, adherencia, efectos no deseados e historial desde su propio dispositivo. Incluye una sección de reportes para generar un resumen semanal, mensual o personalizado destinado a la médica/o tratante.
+Aplicación web mobile-first para que una persona adulta que utiliza cannabis medicinal pueda registrar patologías/condiciones en seguimiento, evolución diaria, sueño, bienestar, funcionalidad, uso u omisión del tratamiento, efectos no deseados, adherencia e historial desde su propio dispositivo.
+
+Incluye una sección de **Reportes para mi médica** para generar un resumen semanal, mensual, completo o personalizado e imprimirlo/guardarlo como PDF.
+
+## Cambios incluidos en esta versión
+
+- Nuevo logo neutral con hoja de cannabis, escudo, cruz médica y check, aplicado como marca del encabezado e ícono PWA.
+- En configuración y onboarding se reemplazó “síntomas seleccionados” por **patologías o condiciones en seguimiento**.
+- Se agregó un catálogo ampliado de condiciones frecuentes para seguimiento: dolor crónico, dolor neuropático, lumbalgia/cervicalgia, artritis, fibromialgia, migrañas/cefaleas, insomnio, ansiedad, estrés, trastornos digestivos, epilepsia, autismo/TEA, Parkinson, esclerosis múltiple, cuidados paliativos, síntomas oncológicos, náuseas/vómitos, bruxismo, psoriasis/afecciones cutáneas y otra condición editable.
+- Cuando aparece “Otro”, “Otra” u “Otros”, ahora hay un campo para escribir manualmente la aclaración correspondiente.
+- En “Mi día”, primero se registra la intensidad de las patologías/condiciones a tratar.
+- Debajo aparece el bloque **Completá los siguientes registros**, con preguntas generales de seguimiento y seguridad inspiradas en el formulario médico de seguimiento: evolución respecto al motivo inicial, mejoría percibida, sueño, bienestar, funcionalidad, desempeño, memoria/concentración, seguridad percibida, control sobre el uso, problemas familiares/laborales/académicos/sociales, utilidad percibida, continuidad, aspectos mejorados, efectos no deseados y comentarios.
+- Los reportes médicos incluyen las nuevas respuestas del último seguimiento.
 
 ## Uso previsto
 
@@ -15,8 +27,8 @@ Esta versión puede usarse como **registro personal del paciente** y como apoyo 
 
 ## Cómo usar el ZIP
 
-1. Descomprimir `seguimiento-cannabis-pacientes-reportes-github.zip`.
-2. Abrir la carpeta `seguimiento-cannabis-pacientes-reportes/`.
+1. Descomprimir `seguimiento-cannabis-pacientes-reportes-v3-github.zip`.
+2. Abrir la carpeta `seguimiento-cannabis-pacientes-reportes-v3/`.
 3. Subir todos los archivos al repositorio de GitHub.
 4. Verificar que `index.html` quede en la raíz del repositorio.
 
@@ -57,14 +69,16 @@ La app usa rutas relativas, por eso puede funcionar dentro de una subcarpeta tip
 - `app.js`: lógica de navegación, formularios, localStorage, cálculos, historial y datos de ejemplo.
 - `manifest.webmanifest`: configuración PWA.
 - `service-worker.js`: caché simple de archivos esenciales.
-- `icons/`: íconos PNG para instalación.
+- `icons/`: íconos PNG para instalación y logo.
 
 ## Funciones incluidas
 
 - Onboarding con perfil por apodo/iniciales.
+- Selección de patologías/condiciones en seguimiento.
+- Campos manuales para opciones “Otro/Otra/Otros”.
 - Avisos de privacidad, alcance y no reemplazo médico.
-- Inicio con check-in, tratamiento del día, resumen y racha.
-- Check-in diario con síntomas, sueño, energía, ánimo, funcionalidad, uso u omisión y efectos no deseados.
+- Inicio con check-in, tratamiento del día, resumen, reporte y racha.
+- Check-in diario con intensidad de patologías/condiciones y registros generales.
 - Tratamiento con producto, horarios, tomas y cambios.
 - Evolución con promedios, adherencia y gráficos simples.
 - Reportes para médica/o tratante con selector semanal, mensual, todo el seguimiento o período personalizado.

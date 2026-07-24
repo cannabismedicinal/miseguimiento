@@ -1,8 +1,9 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'msc_patient_pilot_v1';
-  const MAX_SYMPTOMS = 3;
+  const STORAGE_KEY = 'msc_patient_pilot_v2';
+  const MAX_CONDITIONS = 5;
+  const MAX_SYMPTOMS = MAX_CONDITIONS;
 
   if (!window.CSS) window.CSS = {};
   if (typeof window.CSS.escape !== 'function') {
@@ -27,17 +28,37 @@
   // autenticación, consentimiento informado, auditoría y permisos por rol.
   let state = loadState();
 
-  const reasons = ['Dolor', 'Sueño', 'Ansiedad', 'Estrés', 'Digestión', 'Migrañas', 'Rigidez o tensión muscular', 'Bienestar general', 'Otro'];
-  const symptomOptions = ['Dolor', 'Ansiedad', 'Estrés', 'Sueño', 'Digestión', 'Cefalea', 'Rigidez', 'Energía', 'Estado de ánimo', 'Otro'];
+  // El REPROCANN exige indicación médica; esta lista es un catálogo editable de patologías/condiciones frecuentes para seguimiento, no un listado oficial exhaustivo.
+  const pathologyOptions = [
+    'Dolor crónico', 'Dolor neuropático', 'Dolor musculoesquelético', 'Lumbalgia / cervicalgia',
+    'Artritis / dolor articular', 'Fibromialgia', 'Migrañas / cefaleas', 'Insomnio',
+    'Ansiedad', 'Estrés', 'Trastornos digestivos', 'Epilepsia', 'Autismo / TEA',
+    'Parkinson', 'Esclerosis múltiple', 'Cuidados paliativos', 'Patologías/condiciones asociados a tratamiento oncológico',
+    'Náuseas / vómitos', 'Bruxismo / tensión mandibular', 'Psoriasis / afecciones cutáneas',
+    'Otra condición'
+  ];
+  const durationOptions = ['Menos de 1 mes', '1 a 3 meses', '3 a 6 meses', 'Más de 6 meses'];
   const sleepOptions = ['Muy bien', 'Bien', 'Regular', 'Mal', 'Muy mal'];
   const energyOptions = ['Muy alta', 'Alta', 'Media', 'Baja', 'Muy baja'];
   const moodOptions = ['Muy bueno', 'Bueno', 'Neutral', 'Bajo', 'Muy bajo'];
+  const conditionStatusOptions = ['Mucho peor', 'Peor', 'Igual', 'Mejor', 'Mucho mejor'];
+  const conditionImprovementOptions = ['Sin mejoría', 'Leve mejoría', 'Mejoría moderada', 'Mucha mejoría', 'Mejoría casi completa'];
+  const sleepChangeOptions = ['Mejoró mucho', 'Mejoró un poco', 'Sigue igual', 'Empeoró'];
+  const wellbeingChangeOptions = ['Mejoró mucho', 'Mejoró un poco', 'Sigue igual', 'Empeoró'];
+  const activitiesImprovedOptions = ['Sí, mucho mejor', 'Sí, un poco mejor', 'Igual que antes', 'Peor que antes'];
   const functionalityOptions = ['Sí, sin dificultad', 'Sí, con alguna dificultad', 'Solo parcialmente', 'No pude realizarlas'];
+  const currentSituations = ['Trabajo', 'Estudio', 'Realizo tareas del hogar', 'Estoy jubilado/a', 'Otra situación'];
   const activities = ['Trabajé o estudié', 'Realicé tareas del hogar', 'Caminé o me movilicé', 'Realicé actividad física', 'Disfruté alguna actividad', 'Socialicé', 'Ninguna de las anteriores'];
+  const performanceOptions = ['Sí', 'No', 'Parcialmente'];
+  const cognitiveImpactOptions = ['No', 'Levemente', 'Moderadamente', 'Mucho'];
+  const yesNoOptions = ['Sí', 'No'];
+  const yesNoUnsureOptions = ['Sí', 'No', 'No estoy seguro/a'];
+  const improvedAspects = ['Dormir mejor', 'Disminuir dolor o molestias físicas', 'Reducir ansiedad o estrés', 'Mejorar mi estado de ánimo', 'Trabajar mejor', 'Estudiar mejor', 'Mejorar mi concentración', 'Mejorar mi calidad de vida general', 'Mejorar mis relaciones familiares o sociales', 'Reducir el uso de otros medicamentos', 'Ninguno de los anteriores', 'Otros'];
+  const utilityOptions = ['Sí, muy útil', 'Sí, útil', 'Poco útil', 'No me resultó útil'];
   const routes = ['Sublingual', 'Oral', 'Tópica', 'Vaporizada', 'Otra'];
   const effects = ['No percibí efecto', 'Efecto leve', 'Efecto moderado', 'Efecto marcado', 'Efecto excesivo'];
   const omissionReasons = ['Me olvidé', 'No lo necesitaba', 'No tenía producto disponible', 'Me produjo efectos no deseados', 'Decidí omitirlo', 'Indicación profesional', 'Otro'];
-  const adverseOptions = ['Ninguno', 'Somnolencia excesiva', 'Mareos', 'Boca seca', 'Náuseas', 'Ansiedad', 'Palpitaciones', 'Dificultad de concentración', 'Sensación desagradable', 'Otro'];
+  const adverseOptions = ['Ninguno', 'Somnolencia excesiva', 'Mareos', 'Boca seca', 'Náuseas', 'Ansiedad', 'Paranoia', 'Palpitaciones', 'Dificultad de concentración', 'Sensación desagradable', 'Otros'];
   const productTypes = ['Aceite', 'Tintura', 'Cápsula', 'Tópico', 'Vaporizado', 'Comestible', 'Otro'];
   const predominanceOptions = ['CBD predominante', 'THC predominante', 'Balanceado', 'No conoce'];
   const changeReasons = ['Indicación profesional', 'Respuesta insuficiente', 'Efectos no deseados', 'Cambio de producto', 'Disponibilidad', 'Decisión personal', 'Otro'];
@@ -101,6 +122,8 @@
     clean.intakes = Array.isArray(clean.intakes) ? clean.intakes : [];
     clean.changes = Array.isArray(clean.changes) ? clean.changes : [];
     clean.treatment = clean.treatment || blankTreatment();
+    if (clean.profile && !Array.isArray(clean.profile.conditions)) clean.profile.conditions = Array.isArray(clean.profile.symptoms) ? clean.profile.symptoms : [];
+    if (clean.profile && !Array.isArray(clean.profile.symptoms)) clean.profile.symptoms = clean.profile.conditions || [];
     clean.treatment.schedules = normalizeSchedules(clean.treatment.schedules);
     return clean;
   }
@@ -181,12 +204,30 @@
     window.setTimeout(() => toast.classList.remove('show'), 2600);
   }
 
+  function getProfileConditions() {
+    const conditions = state.profile?.conditions?.length ? state.profile.conditions : state.profile?.symptoms;
+    return (conditions?.length ? conditions : ['Bienestar general']).slice(0, MAX_CONDITIONS);
+  }
+
   function getProfileSymptoms() {
-    return (state.profile?.symptoms?.length ? state.profile.symptoms : ['Bienestar general']).slice(0, MAX_SYMPTOMS);
+    // Compatibilidad con versiones previas: en el modelo anterior se llamaban symptoms.
+    return getProfileConditions();
   }
 
   function mainSymptomName() {
-    return getProfileSymptoms()[0] || 'síntoma principal';
+    return getProfileConditions()[0] || 'condición principal';
+  }
+
+  function getOtherTextFromConditions(list = []) {
+    const item = list.find((value) => String(value).startsWith('Otra condición:'));
+    return item ? String(item).replace('Otra condición:', '').trim() : '';
+  }
+
+  function normalizeSelectedConditions(values, otherText = '') {
+    const base = (values || []).filter((item) => item && item !== 'Otra condición').slice(0, MAX_CONDITIONS);
+    const other = otherText.trim();
+    if (other && base.length < MAX_CONDITIONS) base.push(`Otra condición: ${other}`);
+    return base;
   }
 
   function symptomValue(checkin, symptom) {
@@ -235,7 +276,7 @@
     return `
       <header class="app-header">
         <div class="brand">
-          <div class="brand-mark" aria-hidden="true">MSC</div>
+          <div class="brand-mark" aria-hidden="true"><img src="./icons/logo.png" alt="" /></div>
           <div>
             <p class="brand-title">Mi Seguimiento Cannábico</p>
             <p>${escapeHTML(state.profile.nickname || 'Paciente')}</p>
@@ -278,18 +319,14 @@
   }
 
   function renderOnboarding() {
-    const symptomsHTML = symptomOptions.map((symptom) => `
-      <label class="check-item">
-        <input type="checkbox" name="symptoms" value="${escapeHTML(symptom)}" />
-        <span>${escapeHTML(symptom)}</span>
-      </label>
-    `).join('');
+    const existingConditions = [];
+    const pathologyHTML = pathologyCheckboxHTML('pathology', pathologyOptions, existingConditions);
 
     app.innerHTML = `
       <div class="onboarding-shell">
         <section class="card" style="margin-top: 18px;">
           <div class="brand" style="margin-bottom: 16px;">
-            <div class="brand-mark" aria-hidden="true">MSC</div>
+            <div class="brand-mark" aria-hidden="true"><img src="./icons/logo.png" alt="" /></div>
             <div>
               <h1 class="screen-title">Bienvenido a tu seguimiento</h1>
               <p class="screen-subtitle">Registrá cómo te sentís, cómo utilizás tu tratamiento y qué cambios notás con el tiempo.</p>
@@ -298,7 +335,7 @@
           <div class="notice-card">
             <p><strong>Uso con pacientes:</strong> Esta versión está pensada como registro personal en el dispositivo del paciente. Usá apodo o iniciales y no ingreses DNI, domicilio, fotos de estudios ni información que identifique directamente a la persona.</p>
             <p><strong>Privacidad:</strong> Los datos se guardan únicamente en este dispositivo. No se envían automáticamente a ningún profesional, ONG, servidor ni nube. El paciente puede exportar un resumen si decide compartirlo.</p>
-            <p><strong>Salud:</strong> Esta aplicación organiza información ingresada por el usuario. No brinda diagnósticos, no indica tratamientos, no recomienda dosis y no reemplaza el seguimiento médico. Ante síntomas intensos o una urgencia, contactar al profesional tratante o al servicio de emergencias local.</p>
+            <p><strong>Salud:</strong> Esta aplicación organiza información ingresada por el usuario. No brinda diagnósticos, no indica tratamientos, no recomienda dosis y no reemplaza el seguimiento médico. Ante patologías/condiciones intensos o una urgencia, contactar al profesional tratante o al servicio de emergencias local.</p>
           </div>
         </section>
 
@@ -314,13 +351,18 @@
               <div class="input-wrap"><input id="ob-start" type="date" value="${todayISO()}" /></div>
             </div>
             <div class="form-row">
-              <label for="ob-reason">Motivo principal de seguimiento</label>
-              <select id="ob-reason">${reasons.map((item) => `<option>${escapeHTML(item)}</option>`).join('')}</select>
+              <label for="ob-duration">¿Cuánto tiempo hace que utilizás cannabis medicinal?</label>
+              <select id="ob-duration">${optionHTML(durationOptions, 'Menos de 1 mes')}</select>
             </div>
             <fieldset class="form-row" style="border:0;padding:0;margin:0;">
-              <legend class="form-label">Síntomas que querés observar <span class="muted">(hasta ${MAX_SYMPTOMS})</span></legend>
-              <div class="check-list" id="ob-symptom-list">${symptomsHTML}</div>
-              <small id="symptom-help">Seleccioná entre 1 y 3 opciones.</small>
+              <legend class="form-label">Patologías o condiciones por las que utilizás cannabis medicinal <span class="muted">(hasta ${MAX_CONDITIONS})</span></legend>
+              <p class="section-note">Elegí las condiciones que querés seguir en intensidad. Si marcás “Otra condición”, podés escribirla manualmente.</p>
+              <div class="check-list" id="ob-pathology-list">${pathologyHTML}</div>
+              <div class="form-row other-input">
+                <label for="ob-pathology-other">Especificar otra condición</label>
+                <input id="ob-pathology-other" type="text" placeholder="Ej: bruxismo, neuralgia, dolor de rodilla, etc." />
+              </div>
+              <small id="pathology-help">Seleccioná entre 1 y ${MAX_CONDITIONS} opciones.</small>
             </fieldset>
             <label class="check-item">
               <input id="ob-accept-demo" type="checkbox" />
@@ -330,11 +372,11 @@
               <input id="ob-accept-health" type="checkbox" />
               <span>Comprendo que la aplicación no reemplaza la consulta médica ni indica cambios de tratamiento.</span>
             </label>
-            <button class="primary-btn" type="button" id="start-app">Comenzar</button>
             <label class="check-item">
               <input id="ob-accept-share" type="checkbox" />
               <span>Comprendo que si quiero compartir información con mi profesional debo exportarla o mostrarla voluntariamente.</span>
             </label>
+            <button class="primary-btn" type="button" id="start-app">Comenzar</button>
             <button class="secondary-btn" type="button" id="load-demo-onboarding">Cargar datos de ejemplo y explorar</button>
           </div>
         </section>
@@ -344,37 +386,41 @@
   }
 
   function bindOnboarding() {
-    const symptomBoxes = [...app.querySelectorAll('input[name="symptoms"]')];
-    const help = app.querySelector('#symptom-help');
-    symptomBoxes.forEach((box) => {
+    const conditionBoxes = [...app.querySelectorAll('input[name="pathology"]')];
+    const help = app.querySelector('#pathology-help');
+    conditionBoxes.forEach((box) => {
       box.addEventListener('change', () => {
-        const checked = symptomBoxes.filter((item) => item.checked);
-        if (checked.length > MAX_SYMPTOMS) {
+        const checked = conditionBoxes.filter((item) => item.checked);
+        if (checked.length > MAX_CONDITIONS) {
           box.checked = false;
-          showToast(`Podés elegir hasta ${MAX_SYMPTOMS} síntomas.`);
+          showToast(`Podés elegir hasta ${MAX_CONDITIONS} patologías o condiciones.`);
         }
-        help.textContent = `${symptomBoxes.filter((item) => item.checked).length}/${MAX_SYMPTOMS} seleccionados.`;
+        help.textContent = `${conditionBoxes.filter((item) => item.checked).length}/${MAX_CONDITIONS} seleccionadas.`;
       });
     });
 
     app.querySelector('#start-app').addEventListener('click', () => {
       const nickname = app.querySelector('#ob-nickname').value.trim();
       const startDate = app.querySelector('#ob-start').value || todayISO();
-      const mainReason = app.querySelector('#ob-reason').value;
-      const symptoms = symptomBoxes.filter((item) => item.checked).map((item) => item.value).slice(0, MAX_SYMPTOMS);
+      const cannabisUseDuration = app.querySelector('#ob-duration').value;
+      const selectedRaw = conditionBoxes.filter((item) => item.checked).map((item) => item.value);
+      const conditions = normalizeSelectedConditions(selectedRaw, app.querySelector('#ob-pathology-other').value || '');
       const acceptedDemo = app.querySelector('#ob-accept-demo').checked;
       const acceptedHealth = app.querySelector('#ob-accept-health').checked;
       const acceptedShare = app.querySelector('#ob-accept-share').checked;
 
       if (!nickname) return showToast('Ingresá un apodo, iniciales o nombre elegido.');
-      if (!symptoms.length) return showToast('Seleccioná al menos un síntoma para observar.');
+      if (!conditions.length) return showToast('Seleccioná al menos una patología o condición.');
+      if (selectedRaw.includes('Otra condición') && !app.querySelector('#ob-pathology-other').value.trim()) return showToast('Especificá cuál es la otra condición.');
       if (!acceptedDemo || !acceptedHealth || !acceptedShare) return showToast('Aceptá los avisos obligatorios para continuar.');
 
       state.profile = {
         nickname,
         startDate,
-        mainReason,
-        symptoms,
+        cannabisUseDuration,
+        mainReason: conditions[0],
+        conditions,
+        symptoms: conditions,
         acceptedDemo,
         acceptedHealth,
         acceptedShare,
@@ -458,7 +504,7 @@
 
       <h3 class="section-title">Resumen rápido de hoy</h3>
       <div class="metric-grid">
-        ${metricCard('Síntoma principal', quick.symptom, quick.symptomDetail)}
+        ${metricCard('Condición principal', quick.symptom, quick.symptomDetail)}
         ${metricCard('Sueño', quick.sleep, quick.sleepDetail)}
         ${metricCard('Bienestar', quick.wellbeing, 'Escala 0 a 10')}
         ${metricCard('Efectos no deseados', quick.adverse, quick.adverseDetail)}
@@ -547,17 +593,17 @@
     const existing = editingCheckinId ? state.checkins.find((item) => item.id === editingCheckinId) : todayCheckin();
     const date = existing?.date || todayISO();
     const time = existing?.time || timeNow();
-    const symptoms = getProfileSymptoms();
-    const symptomInputs = symptoms.map((symptom) => {
-      const value = symptomValue(existing, symptom) ?? 5;
+    const conditions = getProfileConditions();
+    const conditionInputs = conditions.map((condition) => {
+      const value = symptomValue(existing, condition) ?? 5;
       return `
         <div class="range-card">
           <div class="range-header">
-            <strong>${escapeHTML(symptom)}</strong>
-            <span class="range-value" id="value-${slug(symptom)}">${value}/10</span>
+            <strong>${escapeHTML(condition)}</strong>
+            <span class="range-value" id="value-${slug(condition)}">${value}/10</span>
           </div>
-          <input type="range" min="0" max="10" step="1" value="${value}" data-range-output="value-${slug(symptom)}" data-symptom="${escapeHTML(symptom)}" aria-label="Intensidad de ${escapeHTML(symptom)}" />
-          <div class="range-scale"><span>0 = nada</span><span>10 = máxima intensidad</span></div>
+          <input type="range" min="0" max="10" step="1" value="${value}" data-range-output="value-${slug(condition)}" data-symptom="${escapeHTML(condition)}" aria-label="Intensidad de ${escapeHTML(condition)}" />
+          <div class="range-scale"><span>0 = sin intensidad</span><span>10 = máxima intensidad percibida</span></div>
         </div>
       `;
     }).join('');
@@ -565,20 +611,43 @@
     const selectedActivities = existing?.activities || [];
     const adverseSelected = existing?.adverseEffects || ['Ninguno'];
     const usedCannabis = existing ? existing.usedCannabis === 'Sí' : true;
+    const currentSituationSelected = existing?.currentSituation || [];
+    const improvedSelected = existing?.improvedAspects || [];
 
     return `
       <section>
         <h2 class="screen-title">¿Cómo estuvo tu día?</h2>
-        <p class="screen-subtitle">Completá este registro en menos de un minuto.</p>
+        <p class="screen-subtitle">Primero registrá la intensidad de las patologías/condiciones a tratar. Después completá los registros generales de seguridad y evolución.</p>
       </section>
 
       <section class="card step-card">
-        <h3 class="section-title" style="margin-top:0;"><span class="step-number">1</span>Síntomas principales</h3>
-        <div class="form-grid">${symptomInputs}</div>
+        <h3 class="section-title" style="margin-top:0;"><span class="step-number">1</span>Intensidad de las patologías o condiciones a tratar</h3>
+        <p class="section-note">Mové cada barra según cómo estuvo hoy la condición por la cual realizás el seguimiento.</p>
+        <div class="form-grid">${conditionInputs}</div>
+      </section>
+
+      <h3 class="subsection-heading">Completá los siguientes registros</h3>
+
+      <section class="card step-card">
+        <h3 class="section-title" style="margin-top:0;"><span class="step-number">2</span>Evolución respecto al motivo del tratamiento</h3>
+        <div class="form-grid">
+          <div class="form-row">
+            <label for="day-condition-status">¿Cómo te encontrás actualmente respecto al motivo por el cual comenzaste el tratamiento?</label>
+            <select id="day-condition-status">${optionHTML(conditionStatusOptions, existing?.conditionStatus || 'Igual')}</select>
+          </div>
+          <div class="form-row">
+            <label for="day-condition-improvement">¿Cuánto sentís que mejoró tu condición principal?</label>
+            <select id="day-condition-improvement">${optionHTML(conditionImprovementOptions, existing?.conditionImprovement || 'Sin mejoría')}</select>
+          </div>
+          <div class="form-row">
+            <label for="day-positive-changes">¿Qué cambios positivos notaste desde que comenzaste el tratamiento? <span class="muted">opcional</span></label>
+            <textarea id="day-positive-changes" placeholder="Ej: dormir mejor, menos molestias físicas, más energía, etc.">${escapeHTML(existing?.positiveChanges || '')}</textarea>
+          </div>
+        </div>
       </section>
 
       <section class="card step-card">
-        <h3 class="section-title" style="margin-top:0;"><span class="step-number">2</span>Sueño</h3>
+        <h3 class="section-title" style="margin-top:0;"><span class="step-number">3</span>Sueño</h3>
         <div class="form-grid two-col">
           <div class="form-row">
             <label for="day-sleep-quality">¿Cómo dormiste anoche?</label>
@@ -592,11 +661,15 @@
             <label for="day-awakenings">Despertares</label>
             <select id="day-awakenings">${optionHTML(['ninguno', '1', '2', '3', '4', '5 o más'], existing?.awakenings || 'ninguno')}</select>
           </div>
+          <div class="form-row">
+            <label for="day-sleep-change">Desde que comenzaste el tratamiento, ¿cómo cambió tu calidad de sueño?</label>
+            <select id="day-sleep-change">${optionHTML(sleepChangeOptions, existing?.sleepChange || 'Sigue igual')}</select>
+          </div>
         </div>
       </section>
 
       <section class="card step-card">
-        <h3 class="section-title" style="margin-top:0;"><span class="step-number">3</span>Estado general</h3>
+        <h3 class="section-title" style="margin-top:0;"><span class="step-number">4</span>Estado general y bienestar</h3>
         <div class="form-grid">
           <div class="two-col">
             <div class="form-row">
@@ -609,28 +682,49 @@
             </div>
           </div>
           <div class="range-card">
-            <div class="range-header"><strong>Bienestar general</strong><span class="range-value" id="value-wellbeing">${existing?.wellbeing ?? 5}/10</span></div>
+            <div class="range-header"><strong>Bienestar general de hoy</strong><span class="range-value" id="value-wellbeing">${existing?.wellbeing ?? 5}/10</span></div>
             <input id="day-wellbeing" type="range" min="0" max="10" step="1" value="${existing?.wellbeing ?? 5}" data-range-output="value-wellbeing" aria-label="Bienestar general" />
+          </div>
+          <div class="form-row">
+            <label for="day-wellbeing-change">Desde que comenzaste el tratamiento, ¿cómo cambió tu estado general de bienestar?</label>
+            <select id="day-wellbeing-change">${optionHTML(wellbeingChangeOptions, existing?.wellbeingChange || 'Sigue igual')}</select>
+          </div>
+          <div class="form-row">
+            <label for="day-activities-improved">¿Podés realizar mejor tus actividades diarias desde que comenzaste el tratamiento?</label>
+            <select id="day-activities-improved">${optionHTML(activitiesImprovedOptions, existing?.activitiesImproved || 'Igual que antes')}</select>
           </div>
         </div>
       </section>
 
       <section class="card step-card">
-        <h3 class="section-title" style="margin-top:0;"><span class="step-number">4</span>Funcionalidad</h3>
+        <h3 class="section-title" style="margin-top:0;"><span class="step-number">5</span>Funcionalidad y actividades</h3>
         <div class="form-grid">
           <div class="form-row">
-            <label for="day-functionality">¿Pudiste realizar tus actividades habituales?</label>
+            <label for="day-functionality">¿Pudiste realizar tus actividades habituales hoy?</label>
             <select id="day-functionality">${optionHTML(functionalityOptions, existing?.functionality || functionalityOptions[1])}</select>
           </div>
           <fieldset class="form-row" style="border:0;margin:0;padding:0;">
-            <legend class="form-label">Actividades realizadas</legend>
+            <legend class="form-label">Actualmente</legend>
+            <div class="check-list">${checkboxHTML('current-situation', currentSituations, currentSituationSelected)}</div>
+            <div class="form-row other-input"><label for="day-current-situation-other">Si marcaste otra situación, especificá</label><input id="day-current-situation-other" type="text" value="${escapeHTML(existing?.currentSituationOther || '')}" /></div>
+          </fieldset>
+          <div class="form-row">
+            <label for="day-performance">¿Sentís que el tratamiento te permite desempeñarte adecuadamente en tus actividades habituales?</label>
+            <select id="day-performance">${optionHTML(performanceOptions, existing?.adequatePerformance || 'Parcialmente')}</select>
+          </div>
+          <div class="form-row">
+            <label for="day-cognition">¿Sentís que el cannabis afecta negativamente tu memoria, concentración o capacidad para realizar tus tareas?</label>
+            <select id="day-cognition">${optionHTML(cognitiveImpactOptions, existing?.cognitiveImpact || 'No')}</select>
+          </div>
+          <fieldset class="form-row" style="border:0;margin:0;padding:0;">
+            <legend class="form-label">Actividades realizadas hoy</legend>
             <div class="check-list">${checkboxHTML('activity', activities, selectedActivities)}</div>
           </fieldset>
         </div>
       </section>
 
       <section class="card step-card">
-        <h3 class="section-title" style="margin-top:0;"><span class="step-number">5</span>Uso de cannabis medicinal</h3>
+        <h3 class="section-title" style="margin-top:0;"><span class="step-number">6</span>Uso de cannabis medicinal</h3>
         <div class="segmented" role="group" aria-label="Uso de cannabis medicinal">
           <button class="chip-btn ${usedCannabis ? 'active' : ''}" type="button" data-cannabis-choice="Sí">Sí</button>
           <button class="chip-btn ${!usedCannabis ? 'active' : ''}" type="button" data-cannabis-choice="No">No</button>
@@ -646,6 +740,7 @@
             <div class="form-row">
               <label for="day-route">Vía</label>
               <select id="day-route">${optionHTML(routes, existing?.route || 'Sublingual')}</select>
+              <div class="form-row other-input"><label for="day-route-other">Si elegiste otra vía, especificá</label><input id="day-route-other" type="text" value="${escapeHTML(existing?.routeOther || '')}" /></div>
             </div>
             <div class="form-row">
               <label for="day-dose-count">Cantidad de tomas</label>
@@ -666,20 +761,40 @@
           <div class="form-row">
             <label for="day-no-use-reason">¿Por qué no lo utilizaste?</label>
             <select id="day-no-use-reason">${optionHTML(omissionReasons, existing?.noUseReason || 'No lo necesitaba')}</select>
+            <div class="form-row other-input"><label for="day-no-use-other">Si elegiste otro motivo, especificá</label><input id="day-no-use-other" type="text" value="${escapeHTML(existing?.noUseReasonOther || '')}" /></div>
           </div>
+        </div>
+
+        <div class="form-grid" style="margin-top:14px;">
+          <div class="form-row"><label for="day-safety">¿Considerás que el tratamiento es seguro para vos?</label><select id="day-safety">${optionHTML(yesNoUnsureOptions, existing?.treatmentSafety || 'No estoy seguro/a')}</select></div>
+          <div class="form-row"><label for="day-therapeutic-use">¿Utilizás el cannabis principalmente con fines terapéuticos para tratar tu condición de salud?</label><select id="day-therapeutic-use">${optionHTML(yesNoOptions, existing?.therapeuticUse || 'Sí')}</select></div>
+          <div class="form-row"><label for="day-social-problems">¿El uso de cannabis te generó problemas familiares, laborales, académicos o sociales?</label><select id="day-social-problems">${optionHTML(yesNoOptions, existing?.socialProblems || 'No')}</select></div>
+          <div class="form-row"><label for="day-control">¿Sentís que tenés control sobre tu uso de cannabis?</label><select id="day-control">${optionHTML(yesNoOptions, existing?.cannabisControl || 'Sí')}</select></div>
+          <div class="form-row"><label for="day-utility">¿Considerás que el cannabis medicinal es una herramienta útil para tu tratamiento?</label><select id="day-utility">${optionHTML(utilityOptions, existing?.cannabisUseful || 'Sí, útil')}</select></div>
+          <div class="form-row"><label for="day-continue">¿Deseás continuar con el tratamiento?</label><select id="day-continue">${optionHTML(yesNoOptions, existing?.continueTreatment || 'Sí')}</select></div>
         </div>
       </section>
 
       <section class="card step-card">
-        <h3 class="section-title" style="margin-top:0;"><span class="step-number">6</span>Efectos no deseados</h3>
+        <h3 class="section-title" style="margin-top:0;"><span class="step-number">7</span>Efectos no deseados</h3>
         <fieldset class="form-row" style="border:0;margin:0;padding:0;">
-          <legend class="form-label">¿Tuviste algún efecto no deseado?</legend>
+          <legend class="form-label">¿Tuviste alguno de estos efectos al utilizar cannabis?</legend>
           <div class="check-list">${checkboxHTML('adverse', adverseOptions, adverseSelected)}</div>
+          <div class="form-row other-input"><label for="day-adverse-other">Si marcaste otros efectos, especificá</label><input id="day-adverse-other" type="text" value="${escapeHTML(existing?.adverseOther || '')}" /></div>
         </fieldset>
         <div class="form-row" id="adverse-intensity-wrap" style="margin-top:12px;">
           <label for="day-adverse-intensity">Intensidad</label>
           <select id="day-adverse-intensity">${optionHTML(['Leve', 'Moderada', 'Intensa'], existing?.adverseIntensity || 'Leve')}</select>
         </div>
+      </section>
+
+      <section class="card step-card">
+        <h3 class="section-title" style="margin-top:0;"><span class="step-number">8</span>Aspectos de la vida que mejoraron</h3>
+        <fieldset class="form-row" style="border:0;margin:0;padding:0;">
+          <legend class="form-label">Gracias al tratamiento con cannabis medicinal, ¿qué aspectos sentís que mejoraron?</legend>
+          <div class="check-list">${checkboxHTML('improved-aspect', improvedAspects, improvedSelected)}</div>
+          <div class="form-row other-input"><label for="day-improved-other">Si marcaste otros, especificá</label><input id="day-improved-other" type="text" value="${escapeHTML(existing?.improvedAspectsOther || '')}" /></div>
+        </fieldset>
       </section>
 
       <section class="card">
@@ -694,8 +809,8 @@
           </div>
         </div>
         <div class="form-row" style="margin-top:12px;">
-          <label for="day-comment">¿Querés registrar algo más? <span class="muted">(opcional)</span></label>
-          <textarea id="day-comment" placeholder="Ejemplo: cambios de rutina, situación de estrés, actividad física, descanso, alimentación o cualquier observación útil.">${escapeHTML(existing?.comment || '')}</textarea>
+          <label for="day-important-changes">Comentarios o cambios importantes desde el último seguimiento <span class="muted">opcional</span></label>
+          <textarea id="day-important-changes" placeholder="Ej: cambios de rutina, descanso, medicación, síntomas, situación de estrés o cualquier observación útil.">${escapeHTML(existing?.importantChanges || existing?.comment || '')}</textarea>
         </div>
         <button class="primary-btn" type="button" id="save-day" style="margin-top:14px;">Guardar mi día</button>
       </section>
@@ -745,7 +860,7 @@
   function saveDayCheckin() {
     const date = app.querySelector('#day-date').value || todayISO();
     const time = app.querySelector('#day-time').value || timeNow();
-    const symptoms = getProfileSymptoms().map((name) => {
+    const symptoms = getProfileConditions().map((name) => {
       const input = app.querySelector(`input[data-symptom="${CSS.escape(name)}"]`);
       return { name, value: num(input?.value, 0) };
     });
@@ -756,9 +871,18 @@
     const adverseEffects = [...app.querySelectorAll('input[name="adverse"]:checked')].map((item) => item.value);
     const hasAdverse = adverseEffects.length && !adverseEffects.includes('Ninguno');
     const activitiesSelected = [...app.querySelectorAll('input[name="activity"]:checked')].map((item) => item.value);
+    const currentSituation = [...app.querySelectorAll('input[name="current-situation"]:checked')].map((item) => item.value);
+    const improvedAspectValues = [...app.querySelectorAll('input[name="improved-aspect"]:checked')].map((item) => item.value);
+
+    if (currentSituation.includes('Otra situación') && !app.querySelector('#day-current-situation-other').value.trim()) return showToast('Especificá cuál es la otra situación actual.');
+    if (usedCannabis === 'Sí' && app.querySelector('#day-route').value === 'Otra' && !app.querySelector('#day-route-other').value.trim()) return showToast('Especificá cuál es la otra vía.');
+    if (usedCannabis === 'No' && app.querySelector('#day-no-use-reason').value === 'Otro' && !app.querySelector('#day-no-use-other').value.trim()) return showToast('Especificá cuál es el otro motivo de no uso.');
+    if (adverseEffects.includes('Otros') && !app.querySelector('#day-adverse-other').value.trim()) return showToast('Especificá cuáles fueron los otros efectos no deseados.');
+    if (improvedAspectValues.includes('Otros') && !app.querySelector('#day-improved-other').value.trim()) return showToast('Especificá qué otros aspectos mejoraron.');
 
     const existingId = editingCheckinId || state.checkins.find((item) => item.date === date)?.id;
     const existing = existingId ? state.checkins.find((item) => item.id === existingId) : null;
+    const importantChanges = app.querySelector('#day-important-changes').value.trim();
 
     const record = {
       id: existing?.id || uid('chk'),
@@ -766,24 +890,46 @@
       date,
       time,
       symptoms,
+      conditionStatus: app.querySelector('#day-condition-status').value,
+      conditionImprovement: app.querySelector('#day-condition-improvement').value,
+      positiveChanges: app.querySelector('#day-positive-changes').value.trim(),
       sleepQuality: app.querySelector('#day-sleep-quality').value,
       sleepHours: sleepHours === '' ? null : num(sleepHours),
       awakenings: app.querySelector('#day-awakenings').value,
+      sleepChange: app.querySelector('#day-sleep-change').value,
       energy: app.querySelector('#day-energy').value,
       mood: app.querySelector('#day-mood').value,
       wellbeing: num(app.querySelector('#day-wellbeing').value, 0),
+      wellbeingChange: app.querySelector('#day-wellbeing-change').value,
+      activitiesImproved: app.querySelector('#day-activities-improved').value,
       functionality: app.querySelector('#day-functionality').value,
+      currentSituation,
+      currentSituationOther: app.querySelector('#day-current-situation-other').value.trim(),
+      adequatePerformance: app.querySelector('#day-performance').value,
+      cognitiveImpact: app.querySelector('#day-cognition').value,
       activities: activitiesSelected,
       usedCannabis,
       productUsed: usedCannabis === 'Sí' ? app.querySelector('#day-product-used').value.trim() : '',
       route: usedCannabis === 'Sí' ? app.querySelector('#day-route').value : '',
+      routeOther: usedCannabis === 'Sí' ? app.querySelector('#day-route-other').value.trim() : '',
       doseCount: usedCannabis === 'Sí' ? (app.querySelector('#day-dose-count').value || '') : '',
       doseText: usedCannabis === 'Sí' ? app.querySelector('#day-dose-text').value.trim() : '',
       perceivedEffect: usedCannabis === 'Sí' ? app.querySelector('#day-effect').value : '',
       noUseReason: usedCannabis === 'No' ? app.querySelector('#day-no-use-reason').value : '',
+      noUseReasonOther: usedCannabis === 'No' ? app.querySelector('#day-no-use-other').value.trim() : '',
+      treatmentSafety: app.querySelector('#day-safety').value,
+      therapeuticUse: app.querySelector('#day-therapeutic-use').value,
+      socialProblems: app.querySelector('#day-social-problems').value,
+      cannabisControl: app.querySelector('#day-control').value,
+      cannabisUseful: app.querySelector('#day-utility').value,
+      continueTreatment: app.querySelector('#day-continue').value,
       adverseEffects: adverseEffects.length ? adverseEffects : ['Ninguno'],
+      adverseOther: app.querySelector('#day-adverse-other').value.trim(),
       adverseIntensity: hasAdverse ? app.querySelector('#day-adverse-intensity').value : '',
-      comment: app.querySelector('#day-comment').value.trim(),
+      improvedAspects: improvedAspectValues,
+      improvedAspectsOther: app.querySelector('#day-improved-other').value.trim(),
+      importantChanges,
+      comment: importantChanges,
       createdAt: existing?.createdAt || nowISO(),
       updatedAt: nowISO(),
       isDemo: existing?.isDemo || false
@@ -852,7 +998,7 @@
         <div class="form-grid">
           <div class="form-row"><label for="t-product">Nombre o identificación del producto</label><input id="t-product" type="text" value="${escapeHTML(treatment.product || '')}" placeholder="Ej: aceite indicado / lote propio" /></div>
           <div class="two-col">
-            <div class="form-row"><label for="t-type">Tipo de producto</label><select id="t-type">${optionHTML(productTypes, treatment.type || 'Aceite')}</select></div>
+            <div class="form-row"><label for="t-type">Tipo de producto</label><select id="t-type">${optionHTML(productTypes, treatment.type || 'Aceite')}</select><div class="form-row other-input"><label for="t-type-other">Si elegiste otro tipo, especificá</label><input id="t-type-other" type="text" value="${escapeHTML(treatment.typeOther || '')}" /></div></div>
             <div class="form-row"><label for="t-predominance">Predominancia declarada</label><select id="t-predominance">${optionHTML(predominanceOptions, treatment.predominance || 'No conoce')}</select></div>
           </div>
           <div class="two-col">
@@ -886,7 +1032,7 @@
         <div class="form-grid">
           <div class="form-row"><label for="change-date">Fecha</label><div class="input-wrap"><input id="change-date" type="date" value="${todayISO()}" /></div></div>
           <div class="form-row"><label for="change-desc">Qué cambió</label><input id="change-desc" type="text" placeholder="Ej: cambio de horario, producto o cantidad registrada" /></div>
-          <div class="form-row"><label for="change-reason">Motivo general</label><select id="change-reason">${optionHTML(changeReasons, 'Indicación profesional')}</select></div>
+          <div class="form-row"><label for="change-reason">Motivo general</label><select id="change-reason">${optionHTML(changeReasons, 'Indicación profesional')}</select><div class="form-row other-input"><label for="change-reason-other">Si elegiste otro motivo, especificá</label><input id="change-reason-other" type="text" /></div></div>
           <div class="form-row"><label for="change-comment">Comentario opcional</label><textarea id="change-comment" placeholder="Solo información general. No cargar datos identificables."></textarea></div>
           <button class="secondary-btn" type="button" id="save-change">Registrar cambio</button>
         </div>
@@ -901,6 +1047,7 @@
         ...old,
         product: app.querySelector('#t-product').value.trim(),
         type: app.querySelector('#t-type').value,
+        typeOther: app.querySelector('#t-type-other')?.value.trim() || '',
         predominance: app.querySelector('#t-predominance').value,
         ratio: app.querySelector('#t-ratio').value.trim(),
         concentration: app.querySelector('#t-concentration').value.trim(),
@@ -938,6 +1085,7 @@
         time: timeNow(),
         description,
         reason: app.querySelector('#change-reason').value,
+        reasonOther: app.querySelector('#change-reason-other')?.value.trim() || '',
         comment: app.querySelector('#change-comment').value.trim(),
         createdAt: nowISO(),
         updatedAt: nowISO(),
@@ -1060,7 +1208,7 @@
       </section>
 
       <div class="metric-grid">
-        ${metricCard(`Promedio ${mainSymptom}`, avg(symptomValues) === null ? '—' : `${round(avg(symptomValues))}/10`, 'Síntoma principal')}
+        ${metricCard(`Promedio ${mainSymptom}`, avg(symptomValues) === null ? '—' : `${round(avg(symptomValues))}/10`, 'Condición principal')}
         ${metricCard('Promedio bienestar', avg(wellbeingValues) === null ? '—' : `${round(avg(wellbeingValues))}/10`, 'Escala 0 a 10')}
         ${metricCard('Horas de sueño', avg(sleepValues) === null ? '—' : `${round(avg(sleepValues))} h`, 'Promedio registrado')}
         ${metricCard('Adherencia', adherence === null ? '—' : `${adherence}%`, 'Últimos registros')}
@@ -1470,9 +1618,10 @@
     const sleepAvg = avg(report.sleepValues);
     const coverage = report.days.length ? Math.round((report.checkins.length / report.days.length) * 100) : 0;
     const doctorName = state.profile?.doctorName || 'Dra. María Belén Lucero';
+    const latest = report.checkins[report.checkins.length - 1] || null;
     const rows = report.checkins.slice(-31).map((item) => {
-      const symptomText = (item.symptoms || []).map((s) => `${s.name}: ${s.value}/10`).join(', ') || 'Sin síntomas';
-      const adverse = hasAdverse(item) ? item.adverseEffects.filter((a) => a !== 'Ninguno').join(', ') + (item.adverseIntensity ? ` (${item.adverseIntensity})` : '') : 'No';
+      const symptomText = (item.symptoms || []).map((s) => `${s.name}: ${s.value}/10`).join(', ') || 'Sin patologías registradas';
+      const adverse = hasAdverse(item) ? item.adverseEffects.filter((a) => a !== 'Ninguno').join(', ') + (item.adverseOther ? `: ${item.adverseOther}` : '') + (item.adverseIntensity ? ` (${item.adverseIntensity})` : '') : 'No';
       return `
         <tr>
           <td>${escapeHTML(formatDate(item.date))}</td>
@@ -1501,7 +1650,8 @@
         <dl class="report-dl">
           <div><dt>Paciente</dt><dd>${escapeHTML(report.profile.nickname || 'Sin completar')}</dd></div>
           <div><dt>Motivo principal</dt><dd>${escapeHTML(report.profile.mainReason || 'Sin completar')}</dd></div>
-          <div><dt>Síntomas observados</dt><dd>${escapeHTML((report.profile.symptoms || []).join(', ') || 'Sin completar')}</dd></div>
+          <div><dt>Patologías/condiciones en seguimiento</dt><dd>${escapeHTML((report.profile.conditions || report.profile.symptoms || []).join(', ') || 'Sin completar')}</dd></div>
+          <div><dt>Tiempo usando cannabis medicinal</dt><dd>${escapeHTML(report.profile.cannabisUseDuration || 'Sin completar')}</dd></div>
           <div><dt>Inicio del seguimiento</dt><dd>${escapeHTML(report.profile.startDate || 'Sin completar')}</dd></div>
         </dl>
       </div>
@@ -1540,12 +1690,35 @@
       </div>
 
       <div class="report-section">
-        <h3>5. Check-ins diarios ${report.checkins.length > 31 ? '(últimos 31 registros del período)' : ''}</h3>
-        ${report.checkins.length ? `<div class="table-wrap"><table class="report-table"><thead><tr><th>Fecha</th><th>Síntomas</th><th>Sueño</th><th>Bienestar</th><th>Uso registrado</th><th>Efectos no deseados</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p>Sin check-ins en este período.</p>'}
+        <h3>5. Respuestas del seguimiento más reciente</h3>
+        ${latest ? `<dl class="report-dl">
+          <div><dt>Fecha</dt><dd>${escapeHTML(latest.date)}</dd></div>
+          <div><dt>Respecto al motivo inicial</dt><dd>${escapeHTML(latest.conditionStatus || 'Sin completar')}</dd></div>
+          <div><dt>Mejoría percibida</dt><dd>${escapeHTML(latest.conditionImprovement || 'Sin completar')}</dd></div>
+          <div><dt>Cambio de sueño</dt><dd>${escapeHTML(latest.sleepChange || 'Sin completar')}</dd></div>
+          <div><dt>Cambio de bienestar</dt><dd>${escapeHTML(latest.wellbeingChange || 'Sin completar')}</dd></div>
+          <div><dt>Actividades diarias</dt><dd>${escapeHTML(latest.activitiesImproved || 'Sin completar')}</dd></div>
+          <div><dt>Desempeño habitual</dt><dd>${escapeHTML(latest.adequatePerformance || 'Sin completar')}</dd></div>
+          <div><dt>Memoria/concentración</dt><dd>${escapeHTML(latest.cognitiveImpact || 'Sin completar')}</dd></div>
+          <div><dt>Seguridad percibida</dt><dd>${escapeHTML(latest.treatmentSafety || 'Sin completar')}</dd></div>
+          <div><dt>Uso terapéutico declarado</dt><dd>${escapeHTML(latest.therapeuticUse || 'Sin completar')}</dd></div>
+          <div><dt>Problemas familiares/laborales/académicos/sociales</dt><dd>${escapeHTML(latest.socialProblems || 'Sin completar')}</dd></div>
+          <div><dt>Control sobre el uso</dt><dd>${escapeHTML(latest.cannabisControl || 'Sin completar')}</dd></div>
+          <div><dt>Utilidad percibida</dt><dd>${escapeHTML(latest.cannabisUseful || 'Sin completar')}</dd></div>
+          <div><dt>Desea continuar</dt><dd>${escapeHTML(latest.continueTreatment || 'Sin completar')}</dd></div>
+          <div><dt>Aspectos mejorados</dt><dd>${escapeHTML([...(latest.improvedAspects || []), latest.improvedAspectsOther ? `Otros: ${latest.improvedAspectsOther}` : ''].filter(Boolean).join(', ') || 'Sin completar')}</dd></div>
+          <div><dt>Cambios positivos</dt><dd>${escapeHTML(latest.positiveChanges || 'Sin completar')}</dd></div>
+          <div><dt>Comentarios/cambios importantes</dt><dd>${escapeHTML(latest.importantChanges || latest.comment || 'Sin completar')}</dd></div>
+        </dl>` : '<p>Sin check-ins en este período.</p>'}
       </div>
 
       <div class="report-section">
-        <h3>6. Cambios de tratamiento en el período</h3>
+        <h3>6. Check-ins diarios ${report.checkins.length > 31 ? '(últimos 31 registros del período)' : ''}</h3>
+        ${report.checkins.length ? `<div class="table-wrap"><table class="report-table"><thead><tr><th>Fecha</th><th>Patologías/condiciones</th><th>Sueño</th><th>Bienestar</th><th>Uso registrado</th><th>Efectos no deseados</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p>Sin check-ins en este período.</p>'}
+      </div>
+
+      <div class="report-section">
+        <h3>7. Cambios de tratamiento en el período</h3>
         ${report.changes.length ? `<ul>${report.changes.map((item) => `<li>${escapeHTML(item.date)}: ${escapeHTML(item.description || '')}. Motivo: ${escapeHTML(item.reason || 'sin motivo')}. ${item.comment ? `Comentario: ${escapeHTML(item.comment)}` : ''}</li>`).join('')}</ul>` : '<p>Sin cambios registrados en este período.</p>'}
       </div>
     `;
@@ -1581,7 +1754,8 @@
       'PERFIL',
       `Paciente: ${report.profile.nickname || 'Sin completar'}`,
       `Motivo principal: ${report.profile.mainReason || 'Sin completar'}`,
-      `Síntomas observados: ${(report.profile.symptoms || []).join(', ') || 'Sin completar'}`,
+      `Patologías/condiciones en seguimiento: ${(report.profile.conditions || report.profile.symptoms || []).join(', ') || 'Sin completar'}`,
+      `Tiempo usando cannabis medicinal: ${report.profile.cannabisUseDuration || 'Sin completar'}`,
       `Inicio del seguimiento: ${report.profile.startDate || 'Sin completar'}`,
       '',
       'TRATAMIENTO REGISTRADO POR EL PACIENTE',
@@ -1605,11 +1779,35 @@
       'OBSERVACIONES OBJETIVAS',
       ...reportObservations(report, symptomAvg, wellbeingAvg, sleepAvg, coverage),
       '',
+      'RESPUESTAS DEL SEGUIMIENTO MÁS RECIENTE',
+      ...(report.checkins.length ? (() => {
+        const latest = report.checkins[report.checkins.length - 1];
+        return [
+          `Fecha: ${latest.date}`,
+          `Respecto al motivo inicial: ${latest.conditionStatus || 'Sin completar'}`,
+          `Mejoría percibida: ${latest.conditionImprovement || 'Sin completar'}`,
+          `Cambio de sueño: ${latest.sleepChange || 'Sin completar'}`,
+          `Cambio de bienestar: ${latest.wellbeingChange || 'Sin completar'}`,
+          `Actividades diarias: ${latest.activitiesImproved || 'Sin completar'}`,
+          `Desempeño habitual: ${latest.adequatePerformance || 'Sin completar'}`,
+          `Memoria/concentración: ${latest.cognitiveImpact || 'Sin completar'}`,
+          `Seguridad percibida: ${latest.treatmentSafety || 'Sin completar'}`,
+          `Uso terapéutico declarado: ${latest.therapeuticUse || 'Sin completar'}`,
+          `Problemas familiares/laborales/académicos/sociales: ${latest.socialProblems || 'Sin completar'}`,
+          `Control sobre el uso: ${latest.cannabisControl || 'Sin completar'}`,
+          `Utilidad percibida: ${latest.cannabisUseful || 'Sin completar'}`,
+          `Desea continuar: ${latest.continueTreatment || 'Sin completar'}`,
+          `Aspectos mejorados: ${[...(latest.improvedAspects || []), latest.improvedAspectsOther ? `Otros: ${latest.improvedAspectsOther}` : ''].filter(Boolean).join(', ') || 'Sin completar'}`,
+          `Cambios positivos: ${latest.positiveChanges || 'Sin completar'}`,
+          `Comentarios/cambios importantes: ${latest.importantChanges || latest.comment || 'Sin completar'}`
+        ];
+      })() : ['Sin check-ins en este período.']),
+      '',
       'CHECK-INS DEL PERÍODO',
       ...(report.checkins.length ? report.checkins.map((item) => {
         const symptomText = (item.symptoms || []).map((symptom) => `${symptom.name}: ${symptom.value}/10`).join(', ');
-        const adverse = hasAdverse(item) ? item.adverseEffects.filter((a) => a !== 'Ninguno').join(', ') + (item.adverseIntensity ? ` (${item.adverseIntensity})` : '') : 'No';
-        return `${item.date}: ${symptomText || 'sin síntomas'} | sueño ${item.sleepHours || '—'} h (${item.sleepQuality || '—'}) | bienestar ${item.wellbeing ?? '—'}/10 | cannabis: ${item.usedCannabis || '—'} | efecto: ${item.perceivedEffect || '—'} | efectos no deseados: ${adverse} | comentario: ${item.comment || 'sin comentario'}`;
+        const adverse = hasAdverse(item) ? item.adverseEffects.filter((a) => a !== 'Ninguno').join(', ') + (item.adverseOther ? `: ${item.adverseOther}` : '') + (item.adverseIntensity ? ` (${item.adverseIntensity})` : '') : 'No';
+        return `${item.date}: ${symptomText || 'sin patologías'} | sueño ${item.sleepHours || '—'} h (${item.sleepQuality || '—'}) | bienestar ${item.wellbeing ?? '—'}/10 | cannabis: ${item.usedCannabis || '—'} | efecto: ${item.perceivedEffect || '—'} | efectos no deseados: ${adverse} | comentario: ${item.comment || 'sin comentario'}`;
       }) : ['Sin check-ins en este período.']),
       '',
       'CAMBIOS DE TRATAMIENTO EN EL PERÍODO',
@@ -1659,7 +1857,8 @@
 
   function renderSettingsView() {
     const profile = state.profile;
-    const selected = profile.symptoms || [];
+    const selected = getProfileConditions();
+    const otherCondition = getOtherTextFromConditions(selected);
     return `
       <section>
         <h2 class="screen-title">Configuración</h2>
@@ -1671,10 +1870,12 @@
         <div class="form-grid">
           <div class="form-row"><label for="set-nickname">Apodo</label><input id="set-nickname" type="text" value="${escapeHTML(profile.nickname || '')}" /></div>
           <div class="form-row"><label for="set-start">Fecha de inicio</label><div class="input-wrap"><input id="set-start" type="date" value="${escapeHTML(profile.startDate || todayISO())}" /></div></div>
-          <div class="form-row"><label for="set-reason">Motivo principal</label><select id="set-reason">${optionHTML(reasons, profile.mainReason || 'Bienestar general')}</select></div>
+          <div class="form-row"><label for="set-duration">¿Cuánto tiempo hace que utilizás cannabis medicinal?</label><select id="set-duration">${optionHTML(durationOptions, profile.cannabisUseDuration || 'Menos de 1 mes')}</select></div>
           <fieldset class="form-row" style="border:0;margin:0;padding:0;">
-            <legend class="form-label">Síntomas seleccionados <span class="muted">(hasta ${MAX_SYMPTOMS})</span></legend>
-            <div class="check-list">${checkboxHTML('settings-symptom', symptomOptions, selected)}</div>
+            <legend class="form-label">Patologías o condiciones en seguimiento <span class="muted">(hasta ${MAX_CONDITIONS})</span></legend>
+            <p class="section-note">Estas condiciones son las que aparecen arriba en “Mi día” para registrar intensidad. Los registros generales se preguntan siempre, aunque no dependan de una patología específica.</p>
+            <div class="check-list">${pathologyCheckboxHTML('settings-pathology', pathologyOptions, selected)}</div>
+            <div class="form-row other-input"><label for="set-pathology-other">Especificar otra condición</label><input id="set-pathology-other" type="text" value="${escapeHTML(otherCondition)}" /></div>
           </fieldset>
           <button class="primary-btn" type="button" id="save-settings-profile">Guardar perfil</button>
         </div>
@@ -1706,26 +1907,30 @@
   }
 
   function bindSettingsView() {
-    const symptomBoxes = [...app.querySelectorAll('input[name="settings-symptom"]')];
-    symptomBoxes.forEach((box) => {
+    const conditionBoxes = [...app.querySelectorAll('input[name="settings-pathology"]')];
+    conditionBoxes.forEach((box) => {
       box.addEventListener('change', () => {
-        if (symptomBoxes.filter((item) => item.checked).length > MAX_SYMPTOMS) {
+        if (conditionBoxes.filter((item) => item.checked).length > MAX_CONDITIONS) {
           box.checked = false;
-          showToast(`Podés elegir hasta ${MAX_SYMPTOMS} síntomas.`);
+          showToast(`Podés elegir hasta ${MAX_CONDITIONS} patologías o condiciones.`);
         }
       });
     });
     app.querySelector('#save-settings-profile').addEventListener('click', () => {
       const nickname = app.querySelector('#set-nickname').value.trim();
-      const symptoms = symptomBoxes.filter((item) => item.checked).map((item) => item.value).slice(0, MAX_SYMPTOMS);
+      const selectedRaw = conditionBoxes.filter((item) => item.checked).map((item) => item.value);
+      const conditions = normalizeSelectedConditions(selectedRaw, app.querySelector('#set-pathology-other').value || '');
       if (!nickname) return showToast('Ingresá un apodo.');
-      if (!symptoms.length) return showToast('Seleccioná al menos un síntoma.');
+      if (!conditions.length) return showToast('Seleccioná al menos una patología o condición.');
+      if (selectedRaw.includes('Otra condición') && !app.querySelector('#set-pathology-other').value.trim()) return showToast('Especificá cuál es la otra condición.');
       state.profile = {
         ...state.profile,
         nickname,
         startDate: app.querySelector('#set-start').value || todayISO(),
-        mainReason: app.querySelector('#set-reason').value,
-        symptoms,
+        cannabisUseDuration: app.querySelector('#set-duration').value,
+        mainReason: conditions[0],
+        conditions,
+        symptoms: conditions,
         updatedAt: nowISO()
       };
       saveState();
@@ -1838,6 +2043,20 @@
     return options.map((item) => `<option value="${escapeHTML(item)}" ${item === selected ? 'selected' : ''}>${escapeHTML(item)}</option>`).join('');
   }
 
+  function pathologyCheckboxHTML(name, options, selected = []) {
+    const otherText = getOtherTextFromConditions(selected);
+    return options.map((item, index) => {
+      const id = `${name}-${slug(item)}-${index}`;
+      const checked = item === 'Otra condición' ? Boolean(otherText || selected.includes(item)) : selected.includes(item);
+      return `
+        <label class="check-item" for="${id}">
+          <input id="${id}" type="checkbox" name="${name}" value="${escapeHTML(item)}" ${checked ? 'checked' : ''} />
+          <span>${escapeHTML(item)}</span>
+        </label>
+      `;
+    }).join('');
+  }
+
   function checkboxHTML(name, options, selected = []) {
     return options.map((item, index) => {
       const id = `${name}-${slug(item)}-${index}`;
@@ -1871,8 +2090,10 @@
     demo.profile = {
       nickname: 'Paciente Demo',
       startDate: start,
-      mainReason: 'Dolor y sueño',
-      symptoms: ['Dolor', 'Sueño', 'Bienestar general'],
+      cannabisUseDuration: 'Más de 6 meses',
+      mainReason: 'Dolor crónico',
+      conditions: ['Dolor crónico', 'Insomnio', 'Trastornos digestivos'],
+      symptoms: ['Dolor crónico', 'Insomnio', 'Trastornos digestivos'],
       acceptedDemo: true,
       acceptedHealth: true,
       isDemo: true,
@@ -1914,18 +2135,28 @@
         date,
         time: '21:30',
         symptoms: [
-          { name: 'Dolor', value: pain },
-          { name: 'Sueño', value: sleepSymptom },
-          { name: 'Bienestar general', value: wellbeing }
+          { name: 'Dolor crónico', value: pain },
+          { name: 'Insomnio', value: sleepSymptom },
+          { name: 'Trastornos digestivos', value: Math.max(1, 6 - Math.floor(i / 4)) }
         ],
+        conditionStatus: i < 3 ? 'Igual' : (i < 9 ? 'Mejor' : 'Mucho mejor'),
+        conditionImprovement: i < 5 ? 'Leve mejoría' : (i < 11 ? 'Mejoría moderada' : 'Mucha mejoría'),
+        positiveChanges: i === 4 ? 'Más energía al despertar. Comentario ficticio.' : '',
         sleepQuality: i < 3 ? 'Regular' : i < 9 ? 'Bien' : 'Muy bien',
         sleepHours: Number((5.5 + Math.min(i, 8) * 0.18).toFixed(1)),
         awakenings: i < 5 ? '3' : i < 10 ? '2' : '1',
+        sleepChange: i < 5 ? 'Mejoró un poco' : 'Mejoró mucho',
         energy: i < 5 ? 'Baja' : 'Media',
         mood: i < 4 ? 'Neutral' : 'Bueno',
         wellbeing,
+        wellbeingChange: i < 5 ? 'Sigue igual' : 'Mejoró un poco',
+        activitiesImproved: i < 7 ? 'Sí, un poco mejor' : 'Sí, mucho mejor',
         functionality: i < 4 ? 'Sí, con alguna dificultad' : 'Sí, sin dificultad',
         activities: i % 2 === 0 ? ['Caminé o me movilicé', 'Realicé tareas del hogar'] : ['Trabajé o estudié', 'Disfruté alguna actividad'],
+        currentSituation: i % 2 === 0 ? ['Realizo tareas del hogar'] : ['Trabajo'],
+        currentSituationOther: '',
+        adequatePerformance: i < 4 ? 'Parcialmente' : 'Sí',
+        cognitiveImpact: i === 9 ? 'Levemente' : 'No',
         usedCannabis: i === 6 ? 'No' : 'Sí',
         productUsed: i === 6 ? '' : 'Aceite balanceado ficticio',
         route: i === 6 ? '' : 'Sublingual',
@@ -1933,8 +2164,19 @@
         doseText: i === 6 ? '' : 'Registro de ejemplo según horarios',
         perceivedEffect: i === 6 ? '' : (i < 5 ? 'Efecto leve' : 'Efecto moderado'),
         noUseReason: i === 6 ? 'Me olvidé' : '',
+        noUseReasonOther: '',
+        treatmentSafety: 'Sí',
+        therapeuticUse: 'Sí',
+        socialProblems: 'No',
+        cannabisControl: 'Sí',
+        cannabisUseful: 'Sí, útil',
+        continueTreatment: 'Sí',
         adverseEffects: adverse,
+        adverseOther: '',
         adverseIntensity: adverse.includes('Ninguno') ? '' : 'Leve',
+        improvedAspects: i < 4 ? ['Dormir mejor'] : ['Dormir mejor', 'Disminuir dolor o molestias físicas'],
+        improvedAspectsOther: '',
+        importantChanges: i === 2 ? 'Día con más tensión y poco descanso. Comentario ficticio.' : (i === 10 ? 'Se registró mejor descanso. Comentario ficticio.' : ''),
         comment: i === 2 ? 'Día con más tensión y poco descanso. Comentario ficticio.' : (i === 10 ? 'Se registró mejor descanso. Comentario ficticio.' : ''),
         createdAt: nowISO(),
         updatedAt: nowISO(),
